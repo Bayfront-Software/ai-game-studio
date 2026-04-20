@@ -47,3 +47,27 @@ def test_cli_resizes_sprite_when_size_option_given(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     with Image.open(output_file) as img:
         assert img.size == (64, 64)
+
+
+def test_cli_removes_background_when_flag_given(tmp_path: Path) -> None:
+    output_file = tmp_path / "hero.png"
+    raw_bytes = b"raw-from-fal"
+    bg_removed_bytes = b"transparent-result"
+
+    runner = CliRunner()
+    generator_patch = patch("ai_game_studio.cli.FalFluxGenerator")
+    remove_bg_patch = patch(
+        "ai_game_studio.cli.remove_background",
+        return_value=bg_removed_bytes,
+    )
+    with generator_patch as mock_gen_cls, remove_bg_patch as mock_remove:
+        mock_gen_cls.return_value.generate.return_value = raw_bytes
+
+        result = runner.invoke(
+            main,
+            ["a hero", "-o", str(output_file), "--remove-bg"],
+        )
+
+    assert result.exit_code == 0, result.output
+    mock_remove.assert_called_once_with(raw_bytes)
+    assert output_file.read_bytes() == bg_removed_bytes

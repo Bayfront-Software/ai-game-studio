@@ -8,7 +8,7 @@ import click
 from dotenv import load_dotenv
 
 from .fal_generator import FalFluxGenerator
-from .postprocess import resize_to
+from .postprocess import remove_background, resize_to
 from .sprite_gen import PostProcessor, generate_sprite
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,14 @@ def _parse_size(size_str: str) -> tuple[int, int]:
     default=None,
     help="Resize the generated sprite to WxH pixels (e.g. 64x64).",
 )
-def main(prompt: str, output: Path, size: str | None) -> None:
+@click.option(
+    "--remove-bg",
+    "remove_bg",
+    is_flag=True,
+    default=False,
+    help="Remove the sprite background using rembg.",
+)
+def main(prompt: str, output: Path, size: str | None, remove_bg: bool) -> None:
     """Generate a sprite PNG from a text prompt via fal.ai FLUX.1 schnell."""
     logging.basicConfig(
         level=logging.INFO,
@@ -52,6 +59,8 @@ def main(prompt: str, output: Path, size: str | None) -> None:
     load_dotenv()
 
     post_processors: list[PostProcessor] = []
+    if remove_bg:
+        post_processors.append(remove_background)
     if size is not None:
         width, height = _parse_size(size)
         post_processors.append(partial(resize_to, width=width, height=height))
