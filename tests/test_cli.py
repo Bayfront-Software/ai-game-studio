@@ -7,7 +7,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 from PIL import Image
 
-from ai_game_studio.cli import main
+from ai_game_studio.cli import main, spritesheet_main
 
 
 def _make_solid_png(width: int, height: int) -> bytes:
@@ -71,3 +71,24 @@ def test_cli_removes_background_when_flag_given(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     mock_remove.assert_called_once_with(raw_bytes)
     assert output_file.read_bytes() == bg_removed_bytes
+
+
+def test_spritesheet_cli_generates_frames_and_tiles_them_into_grid(
+    tmp_path: Path,
+) -> None:
+    output_file = tmp_path / "sheet.png"
+    frame_png = _make_solid_png(16, 16)
+
+    runner = CliRunner()
+    with patch("ai_game_studio.cli.FalFluxGenerator") as mock_generator_cls:
+        mock_generator_cls.return_value.generate.return_value = frame_png
+
+        result = runner.invoke(
+            spritesheet_main,
+            ["a hero", "-o", str(output_file), "--frames", "4", "--columns", "2"],
+        )
+
+    assert result.exit_code == 0, result.output
+    assert mock_generator_cls.return_value.generate.call_count == 4
+    with Image.open(output_file) as sheet:
+        assert sheet.size == (32, 32)

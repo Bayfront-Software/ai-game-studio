@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from .fal_generator import FalFluxGenerator
 from .postprocess import remove_background, resize_to
 from .sprite_gen import PostProcessor, generate_sprite
+from .spritesheet import build_spritesheet
 
 logger = logging.getLogger(__name__)
 
@@ -75,5 +76,49 @@ def main(prompt: str, output: Path, size: str | None, remove_bg: bool) -> None:
         click.echo(f"Generated: {result_path}")
     except Exception as exc:
         logger.exception("Sprite generation failed")
+        click.echo(f"Error: {exc}", err=True)
+        raise click.Abort() from exc
+
+
+@click.command(name="gen-spritesheet")
+@click.argument("prompt")
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path),
+    default=Path("spritesheet.png"),
+    show_default=True,
+    help="Output PNG file path.",
+)
+@click.option(
+    "--frames",
+    type=click.IntRange(min=1),
+    default=4,
+    show_default=True,
+    help="Number of frames to generate.",
+)
+@click.option(
+    "--columns",
+    type=click.IntRange(min=1),
+    default=2,
+    show_default=True,
+    help="Number of columns in the spritesheet grid.",
+)
+def spritesheet_main(prompt: str, output: Path, frames: int, columns: int) -> None:
+    """Generate N frames of PROMPT and tile them into a spritesheet grid."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
+    load_dotenv()
+
+    try:
+        generator = FalFluxGenerator()
+        frame_bytes = [generator.generate(prompt) for _ in range(frames)]
+        sheet_bytes = build_spritesheet(frame_bytes, columns=columns)
+        output.write_bytes(sheet_bytes)
+        click.echo(f"Generated: {output} ({frames} frames, {columns} columns)")
+    except Exception as exc:
+        logger.exception("Spritesheet generation failed")
         click.echo(f"Error: {exc}", err=True)
         raise click.Abort() from exc
