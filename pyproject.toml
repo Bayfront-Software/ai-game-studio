@@ -24,6 +24,7 @@ dev = [
 
 [project.scripts]
 gen-sprite = "ai_game_studio.cli:main"
+gen-spritesheet = "ai_game_studio.cli:spritesheet_main"
 
 [build-system]
 requires = ["hatchling"]
